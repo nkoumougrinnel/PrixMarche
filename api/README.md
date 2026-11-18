@@ -25,9 +25,31 @@ Toutes les réponses sont en JSON et indiquent `"donnees": "fictives"` quand les
 |---|---|---|
 | `GET` | `/health` | Vérifier que l'API répond |
 | `GET` | `/products` | Liste des produits et des marchés |
-| `GET` | `/prices?produit=tomate&marche=mokolo` | Historique des prix (format commun) |
+| `GET` | `/prices?produit=tomate&marche=mokolo&depuis=2026-10-26` | Historique trié des prix ; `depuis` (facultatif) filtre à partir d'une date incluse |
 | `POST` | `/prices` | Enregistrer un ou plusieurs relevés envoyés par le téléphone |
 | `GET` | `/predict?produit=tomate&marche=mokolo` | Prévision pour la semaine suivante |
+
+### Exemple de réponse `/prices`
+
+```json
+{
+  "produit": "tomate",
+  "marche": "mokolo",
+  "donnees": "fictives",
+  "prix": [
+    {"semaine": "2026-09-21", "produit": "tomate", "marche": "mokolo", "prix_fcfa": 605, "unite": "kg", "source": "synthetique"},
+    {"semaine": "2026-09-28", "produit": "tomate", "marche": "mokolo", "prix_fcfa": 622, "unite": "kg", "source": "synthetique"},
+    {"semaine": "2026-10-05", "produit": "tomate", "marche": "mokolo", "prix_fcfa": 639, "unite": "kg", "source": "synthetique"},
+    {"semaine": "2026-10-12", "produit": "tomate", "marche": "mokolo", "prix_fcfa": 656, "unite": "kg", "source": "synthetique"},
+    {"semaine": "2026-10-19", "produit": "tomate", "marche": "mokolo", "prix_fcfa": 673, "unite": "kg", "source": "synthetique"},
+    {"semaine": "2026-10-26", "produit": "tomate", "marche": "mokolo", "prix_fcfa": 690, "unite": "kg", "source": "synthetique"},
+    {"semaine": "2026-11-02", "produit": "tomate", "marche": "mokolo", "prix_fcfa": 616, "unite": "kg", "source": "synthetique"},
+    {"semaine": "2026-11-09", "produit": "tomate", "marche": "mokolo", "prix_fcfa": 633, "unite": "kg", "source": "synthetique"}
+  ]
+}
+```
+
+Les paramètres `produit` et `marche` sont obligatoires. `depuis` accepte une date `AAAA-MM-JJ` et inclut cette semaine.
 
 ### Exemple de réponse `/predict`
 
