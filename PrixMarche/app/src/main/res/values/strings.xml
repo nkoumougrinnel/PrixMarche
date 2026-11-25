@@ -1,9 +1,21 @@
 <resources>
     <string name="app_name">PrixMarche</string>
+    <string name="app_subtitle">Suivi et analyse des prix des denrées</string>
+    <string name="section_saisie_titre">Nouveau relevé de prix</string>
+    <string name="section_graphique_titre">Aperçu graphique des prix</string>
+    <string name="section_resultats_titre">Relevés enregistrés</string>
+
     <string name="hint_produit">Produit (ex. Tomate, Riz)</string>
     <string name="hint_marche">Marché (ex. Mokolo, Mfoundi, Essos)</string>
-    <string name="hint_prix">Prix (ex. 500)</string>
-    <string name="btn_enregistrer">Enregistrer</string>
+    <string name="hint_prix">Prix en FCFA (ex. 500)</string>
+    <string name="hint_unite">Unité (optionnel, ex. kg, tas)</string>
+
+    <string name="btn_enregistrer">Enregistrer le relevé</string>
     <string name="btn_afficher">Afficher les données</string>
-    <string name="tv_aucun_resultat">Aucun résultat pour le moment.</string>
+    <string name="btn_filtrer_marche">Filtrer par marché</string>
+    <string name="btn_tout_afficher">Tout afficher</string>
+
+    <string name="tv_aucun_resultat">Aucun relevé enregistré pour le moment.</string>
+    <string name="tv_aucun_resultat_marche">Aucun relevé trouvé pour ce marché.</string>
+    <string name="label_total_releves">Total : %1$d relevé(s)</string>
 </resources>

@@ -10,7 +10,9 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
@@ -20,7 +22,10 @@ public class MainActivity extends AppCompatActivity {
     private EditText etPrixProduit;
     private Button btnEnregistrer;
     private Button btnAfficher;
+    private Button btnFiltrerMarche;
     private TextView tvResultats;
+    private TextView tvCompteurReleves;
+    private PrixChartView prixChartView;
     private DatabaseHelper dbHelper;
 
     @Override
@@ -35,10 +40,26 @@ public class MainActivity extends AppCompatActivity {
         etPrixProduit = findViewById(R.id.etPrixProduit);
         btnEnregistrer = findViewById(R.id.btnEnregistrer);
         btnAfficher = findViewById(R.id.btnAfficher);
+        btnFiltrerMarche = findViewById(R.id.btnFiltrerMarche);
         tvResultats = findViewById(R.id.tvResultats);
+        tvCompteurReleves = findViewById(R.id.tvCompteurReleves);
+        prixChartView = findViewById(R.id.prixChartView);
 
         btnEnregistrer.setOnClickListener(v -> enregistrerDonnees());
-        btnAfficher.setOnClickListener(v -> afficherDonnees());
+
+        btnAfficher.setOnClickListener(v -> afficherTousLesReleves(true));
+
+        btnFiltrerMarche.setOnClickListener(v -> {
+            String marche = etNomMarche.getText().toString().trim();
+            if (marche.isEmpty()) {
+                Toast.makeText(this, "Saisissez un marché pour filtrer.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            afficherRelevesParMarche(marche);
+        });
+
+        // Chargement initial au démarrage
+        afficherTousLesReleves(false);
     }
 
     private void enregistrerDonnees() {
@@ -54,15 +75,25 @@ public class MainActivity extends AppCompatActivity {
         double valeurPrix;
         try {
             valeurPrix = Double.parseDouble(prixTexte);
+            if (valeurPrix <= 0) {
+                Toast.makeText(this, "Le prix doit être supérieur à 0.", Toast.LENGTH_SHORT).show();
+                return;
+            }
         } catch (NumberFormatException e) {
             Toast.makeText(this, "Veuillez saisir un prix valide.", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        String uniteDefaut = "unité";
-        dbHelper.insererProduit(produit, uniteDefaut);
-
         int produitId = trouverProduitId(produit);
+        if (produitId == -1) {
+            boolean produitInsere = dbHelper.insererProduit(produit, "unité");
+            if (!produitInsere) {
+                Toast.makeText(this, "Erreur lors de l'ajout du produit.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            produitId = trouverProduitId(produit);
+        }
+
         if (produitId == -1) {
             Toast.makeText(this, "Impossible de récupérer l'identifiant du produit.", Toast.LENGTH_SHORT).show();
             return;
@@ -73,10 +104,10 @@ public class MainActivity extends AppCompatActivity {
 
         boolean prixInsere = dbHelper.insererPrix(produitId, marche, valeurPrix, dateActuelle, source);
         if (prixInsere) {
-            Toast.makeText(this, "Enregistrement effectué.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Relevé enregistré avec succès.", Toast.LENGTH_SHORT).show();
             etNomProduit.setText("");
             etPrixProduit.setText("");
-            afficherDonnees();
+            afficherTousLesReleves(false);
         } else {
             Toast.makeText(this, "Échec de l'enregistrement du prix.", Toast.LENGTH_SHORT).show();
         }
@@ -89,7 +120,6 @@ public class MainActivity extends AppCompatActivity {
             try {
                 if (cursor.moveToFirst()) {
                     do {
-                        // Suppose généralement colonne 0 = id, colonne 1 = nom
                         if (cursor.getColumnCount() >= 2) {
                             String nom = cursor.getString(1);
                             if (nom != null && nom.equalsIgnoreCase(nomProduit)) {
@@ -106,56 +136,68 @@ public class MainActivity extends AppCompatActivity {
         return idTrouve;
     }
 
-    private void afficherDonnees() {
-        String marcheFiltre = etNomMarche.getText().toString().trim();
-        StringBuilder builder = new StringBuilder();
+    private void afficherTousLesReleves(boolean afficherFeedback) {
+        Cursor cursor = dbHelper.obtenirTousLesPrix();
+        afficherDepuisCursor(cursor, getString(R.string.tv_aucun_resultat));
+        if (afficherFeedback) {
+            Toast.makeText(this, "Données actualisées.", Toast.LENGTH_SHORT).show();
+        }
+    }
 
-        if (!marcheFiltre.isEmpty()) {
-            Cursor cursor = dbHelper.obtenirPrixParMarche(marcheFiltre);
-            if (cursor != null) {
-                try {
-                    if (cursor.moveToFirst()) {
-                        do {
-                            StringBuilder ligne = new StringBuilder();
-                            for (int i = 0; i < cursor.getColumnCount(); i++) {
-                                if (i > 0) {
-                                    ligne.append(" | ");
-                                }
-                                ligne.append(cursor.getString(i));
-                            }
-                            builder.append(ligne).append("\n");
-                        } while (cursor.moveToNext());
-                    }
-                } finally {
-                    cursor.close();
+    private void afficherRelevesParMarche(String marche) {
+        Cursor cursor = dbHelper.obtenirPrixParMarche(marche);
+        afficherDepuisCursor(cursor, getString(R.string.tv_aucun_resultat_marche));
+        Toast.makeText(this, "Filtre appliqué : " + marche, Toast.LENGTH_SHORT).show();
+    }
+
+    private void afficherDepuisCursor(Cursor cursor, String messageVide) {
+        StringBuilder builder = new StringBuilder();
+        List<PrixChartView.PointPrix> pointsGraphique = new ArrayList<>();
+        int compteur = 0;
+
+        if (cursor != null) {
+            try {
+                if (cursor.moveToFirst()) {
+                    do {
+                        compteur++;
+                        // Colonnes attendues : 0=nom_produit, 1=marche, 2=valeur, 3=date, 4=source
+                        String nomProduit = cursor.getColumnCount() > 0 ? cursor.getString(0) : "";
+                        String marche = cursor.getColumnCount() > 1 ? cursor.getString(1) : "";
+                        String prixStr = cursor.getColumnCount() > 2 ? cursor.getString(2) : "0";
+                        String dateStr = cursor.getColumnCount() > 3 ? cursor.getString(3) : "";
+                        String sourceStr = cursor.getColumnCount() > 4 ? cursor.getString(4) : "";
+
+                        double prixNum = 0.0;
+                        try {
+                            prixNum = Double.parseDouble(prixStr);
+                        } catch (NumberFormatException ignored) {
+                        }
+
+                        pointsGraphique.add(new PrixChartView.PointPrix(nomProduit, prixNum));
+
+                        builder.append("• ").append(nomProduit)
+                                .append(" — ").append(prixStr).append(" FCFA\n")
+                                .append("   Marché : ").append(marche)
+                                .append(" | Date : ").append(dateStr)
+                                .append(" | Source : ").append(sourceStr);
+
+                        if (compteur < cursor.getCount()) {
+                            builder.append("\n\n");
+                        }
+                    } while (cursor.moveToNext());
                 }
-            }
-        } else {
-            Cursor cursor = dbHelper.obtenirTousLesProduits();
-            if (cursor != null) {
-                try {
-                    if (cursor.moveToFirst()) {
-                        do {
-                            StringBuilder ligne = new StringBuilder();
-                            for (int i = 0; i < cursor.getColumnCount(); i++) {
-                                if (i > 0) {
-                                    ligne.append(" | ");
-                                }
-                                ligne.append(cursor.getString(i));
-                            }
-                            builder.append(ligne).append("\n");
-                        } while (cursor.moveToNext());
-                    }
-                } finally {
-                    cursor.close();
-                }
+            } finally {
+                cursor.close();
             }
         }
 
+        tvCompteurReleves.setText(getString(R.string.label_total_releves, compteur));
+        prixChartView.setDonnees(pointsGraphique);
+
         if (builder.length() == 0) {
-            tvResultats.setText(R.string.tv_aucun_resultat);
+            tvResultats.setText(messageVide);
         } else {
-            tvResultats.setText(builder.toString().trim());
+            tvResultats.setText(builder.toString());
         }
     }
 }

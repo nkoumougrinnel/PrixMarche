@@ -100,4 +100,18 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 " p ON pr." + COL_PRIX_PRODUIT_ID + " = p." + COL_PRODUIT_ID +
                 " WHERE pr." + COL_PRIX_MARCHE + " = ?", new String[]{marche});
     }
+    // Récupérer tous les relevés de prix de tous les marchés avec le nom du produit
+    public Cursor obtenirTousLesPrix() {
+        SQLiteDatabase db = this.getReadableDatabase();
+        String query = "SELECT p." + COL_PRODUIT_NOM + ", "
+                + "pr." + COL_PRIX_MARCHE + ", "
+                + "pr." + COL_PRIX_VALEUR + ", "
+                + "pr." + COL_PRIX_DATE + ", "
+                + "pr." + COL_PRIX_SOURCE + " "
+                + "FROM " + TABLE_PRIX + " pr "
+                + "INNER JOIN " + TABLE_PRODUIT + " p "
+                + "ON pr." + COL_PRIX_PRODUIT_ID + " = p." + COL_PRODUIT_ID + " "
+                + "ORDER BY pr." + COL_PRIX_ID + " DESC";
+        return db.rawQuery(query, null);
+    }
 }
